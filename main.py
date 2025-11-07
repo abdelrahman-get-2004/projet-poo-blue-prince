@@ -1,5 +1,6 @@
 import pygame
 import sys
+from joueur import Joueur
 
 # Initialisation de Pygame
 pygame.init()
@@ -18,6 +19,8 @@ pygame.display.set_caption(SCREEN_TITLE)
 
 # Horloge pour contrôler la vitesse de rafraîchissement
 clock = pygame.time.Clock()
+# --- Créer les objets du jeu ---
+joueur_principal = Joueur()
 
 # --- Boucle de jeu principale ---
 running = True
@@ -32,6 +35,9 @@ while running:
             if event.key == pygame.K_ESCAPE: # Appuyer sur Echap pour quitter
                 running = False
 
+            
+            if event.key == pygame.K_SPACE:
+                joueur_principal.perdre_pas(1)
     # --- Logique du jeu (à venir) ---
     # ...
 
