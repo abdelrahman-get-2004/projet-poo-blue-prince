@@ -47,4 +47,31 @@ GATEAU = Nourriture("Gâteau", 10)    # [cite: 74]
 SANDWICH = Nourriture("Sandwich", 15) # [cite: 75]
 REPAS = Nourriture("Repas", 25)      # [cite: 76]
 
-# (Plus tard, vous ajouterez la classe ObjetPermanent ici)
+
+# --- DEUXIÈME ENFANT : OBJET PERMANENT (Héritage 2) ---
+
+class ObjetPermanent(Objet):
+    """
+    Représente un objet permanent (Pelle, Marteau, etc.).
+    Hérite de la classe Objet.
+    """
+    def __init__(self, nom: str):
+        # On appelle le constructeur de la classe Mère (Objet)
+        super().__init__(nom)
+
+    def utiliser(self, joueur):
+        """
+        Implémentation de la méthode abstraite.
+        Pour un objet permanent, "utiliser" ne fait rien
+        par défaut.
+        """
+        print(f"L'objet {self.nom} est déjà dans l'inventaire permanent.")
+        pass
+
+# --- CRÉER DES OBJETS PERMANENTS ---
+# On crée des instances que le reste du jeu pourra utiliser
+PELLE = ObjetPermanent("Pelle")               # [cite: 53]
+MARTEAU = ObjetPermanent("Marteau")             # [cite: 54]
+KIT_CROCHETAGE = ObjetPermanent("Kit de crochetage") # [cite: 55]
+DETECTEUR_METAUX = ObjetPermanent("Détecteur de métaux") # [cite: 56]
+PATTE_LAPIN = ObjetPermanent("Patte de lapin")   # [cite: 57]
