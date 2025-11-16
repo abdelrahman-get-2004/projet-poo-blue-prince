@@ -1,47 +1,86 @@
 # fichier: joueur.py
 
-# fichier: joueur.py
-
 class Joueur:
     """
     Représente le joueur et son inventaire.
+    Contient toutes les méthodes pour manipuler l'inventaire.
     """
     def __init__(self):
-        # --- Inventaire Consommable (Section 2.1) ---
-        self.pas = 70         # Initialement 70
-        self.pieces_or = 0    # Initialement 0
-        self.gemmes = 2       # Initialement 2
-        self.cles = 0         # Initialement 0
-        self.des = 0          # Initialement 0
-
-        # --- NOUVEAU : Inventaire d'Objets ---
-        # Cette liste remplacera les 'self.pelle = False', etc.
-        # Elle contiendra des objets comme POMME, PELLE, MARTEAU...
+        # Inventaire Consommable (transformé en dictionnaire)
+        self.consommables = {
+            "pas": 70,         # [cite: 47]
+            "pieces_or": 0,    # [cite: 48]
+            "gemmes": 2,       # [cite: 49]
+            "cles": 0,         # [cite: 50]
+            "des": 0           # [cite: 51]
+        }
+        
+        # Inventaire des objets (Nourriture, Objets Permanents)
         self.inventaire_objets = []
 
     def __str__(self):
-        # AJOUT : Utile pour les messages de print
         return "Le Joueur"
 
-    # --- Méthodes pour gérer l'inventaire ---
-
+    # --- MÉTHODES POUR LES PAS ---
     def perdre_pas(self, quantite=1):
-        """Fait perdre des pas au joueur."""
-        self.pas -= quantite
-        print(f"Pas restants : {self.pas}") # (Pour tester)
+        self.consommables["pas"] -= quantite
+        print(f"Pas restants : {self.consommables['pas']}")
+
+    def gagner_pas(self, quantite):
+        self.consommables["pas"] += quantite
+        print(f"Le Joueur gagne {quantite} pas. Total : {self.consommables['pas']}")
 
     def a_assez_pas(self):
-        """Vérifie si le joueur peut encore se déplacer."""
-        return self.pas > 0
+        return self.consommables["pas"] > 0
 
-    # --- AJOUTÉ : Méthodes pour le "Contrat" avec objets.py ---
+    # --- MÉTHODES POUR LES AUTRES CONSOMMABLES ---
     
-    def gagner_pas(self, quantite):
-        """
-        Le "CONTRAT" pour la classe Nourriture.
-        """
-        self.pas += quantite
-        print(f"Le Joueur gagne {quantite} pas. Total : {self.pas}")
+    def _gagner_consommable(self, nom, quantite):
+        """Méthode privée générique pour ajouter un consommable."""
+        if nom in self.consommables:
+            self.consommables[nom] += quantite
+            print(f"Le Joueur gagne {quantite} {nom}. Total : {self.consommables[nom]}")
+        else:
+            print(f"Erreur: Consommable '{nom}' inconnu.")
+
+    def _a_assez_consommable(self, nom, quantite_necessaire):
+        """Méthode privée générique pour vérifier un consommable."""
+        if nom in self.consommables:
+            return self.consommables[nom] >= quantite_necessaire
+        return False
+
+    def _depenser_consommable(self, nom, quantite):
+        """Méthode privée générique pour dépenser un consommable."""
+        if self._a_assez_consommable(nom, quantite):
+            self.consommables[nom] -= quantite
+            print(f"Le Joueur dépense {quantite} {nom}. Restant : {self.consommables[nom]}")
+            return True
+        print(f"Pas assez de {nom} pour dépenser {quantite}.")
+        return False
+
+    # --- MÉTHODES "CONTRAT" (Publiques) POUR IDRIS ET TIANTIAN ---
+    
+    # Gemmes
+    def gagner_gemmes(self, quantite): self._gagner_consommable("gemmes", quantite)
+    def a_assez_gemmes(self, quantite): return self._a_assez_consommable("gemmes", quantite)
+    def depenser_gemmes(self, quantite): return self._depenser_consommable("gemmes", quantite) # [cite: 133]
+
+    # Clés
+    def gagner_cles(self, quantite): self._gagner_consommable("cles", quantite)
+    def a_assez_cles(self, quantite): return self._a_assez_consommable("cles", quantite)
+    def depenser_cle(self, quantite=1): return self._depenser_consommable("cles", quantite) # [cite: 121]
+
+    # Dés
+    def gagner_des(self, quantite): self._gagner_consommable("des", quantite)
+    def a_assez_des(self, quantite): return self._a_assez_consommable("des", quantite)
+    def depenser_de(self, quantite=1): return self._depenser_consommable("des", quantite) # [cite: 131]
+
+    # Or (pour Syscom)
+    def gagner_or(self, quantite): self._gagner_consommable("pieces_or", quantite)
+    def a_assez_or(self, quantite): return self._a_assez_consommable("pieces_or", quantite)
+    def depenser_or(self, quantite): return self._depenser_consommable("pieces_or", quantite) # [cite: 173]
+
+    # --- MÉTHODES POUR LES OBJETS (Inventaire) ---
 
     def ajouter_objet(self, objet):
         """Ajoute un objet (Nourriture, ObjetPermanent, etc.) à l'inventaire."""
@@ -51,7 +90,7 @@ class Joueur:
     def a_objet(self, nom_objet: str) -> bool:
         """
         Vérifie si le joueur possède un objet par son nom.
-        Ex: a_objet("Pelle")
+        Ex: a_objet("Pelle") [cite: 53] ou a_objet("Kit de crochetage") [cite: 55]
         """
         for objet in self.inventaire_objets:
             if objet.nom == nom_objet:
