@@ -1,48 +1,22 @@
-# fichier: grille.py
-#j ai commencé le partie idris continue dans ce fichier
-
-# On importe la classe de Tiantian(les rooms)
-from typing import Optional
-from room_defs import RoomTemplate
+from typing import Optional, Tuple
+from piece import Piece
 
 class Grille:
-    """
-    Représente le manoir 5x9.
-    Contient la matrice des pièces et la position du joueur.
-    """
-    def __init__(self, rows=5, cols=9):
+    def __init__(self, rows: int, cols: int):
         self.rows = rows
         self.cols = cols
-        
-        # Une matrice 5x9 remplie de "None"
-        self.matrice = [[None for _ in range(cols)] for _ in range(rows)]
-        
-        # Position de départ du joueur (arbitraire, ex: milieu en bas)
-        self.joueur_x = 4  # Ligne 4 (la dernière)
-        self.joueur_y = 4  # Colonne 4 (la centrale)
+        self.grid: list[list[Optional[Piece]]] = [[None for _ in range(cols)] for _ in range(rows)]
+        self.player_pos: Tuple[int, int] = (rows // 2, cols // 2)
 
-    def get_piece(self, x, y) -> Optional[RoomTemplate]:
-        """Récupère la pièce à une coordonnée."""
-        if 0 <= x < self.rows and 0 <= y < self.cols:
-            return self.matrice[x][y]
+    def placer_piece(self, piece: Piece, row: int, col: int):
+        if 0 <= row < self.rows and 0 <= col < self.cols:
+            self.grid[row][col] = piece
+
+    def get_piece(self, row: int, col: int) -> Optional[Piece]:
+        if 0 <= row < self.rows and 0 <= col < self.cols:
+            return self.grid[row][col]
         return None
 
-    def placer_piece(self, piece: RoomTemplate, x: int, y: int):
-        """Place une pièce découverte sur la grille."""
-        if 0 <= x < self.rows and 0 <= y < self.cols:
-            self.matrice[x][y] = piece
-            print(f"Pièce {piece.name} placée en ({x}, {y})")
-
-    def deplacer_joueur(self, dx, dy):
-        """Tente de déplacer le joueur."""
-        new_x, new_y = self.joueur_x + dx, self.joueur_y + dy
-        
-        # Vérifier si on est dans les limites de la grille
-        if 0 <= new_x < self.rows and 0 <= new_y < self.cols:
-            self.joueur_x = new_x
-            self.joueur_y = new_y
-            print(f"Joueur déplacé en ({self.joueur_x}, {self.joueur_y})")
-            return True # Déplacement réussi
-        
-        print("Déplacement hors limites impossible.")
-        return False # Déplacement échoué
+    def set_player_pos(self, row: int, col: int):
+        if 0 <= row < self.rows and 0 <= col < self.cols:
+            self.player_pos = (row, col)
