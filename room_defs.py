@@ -188,3 +188,18 @@ def build_initial_deck() -> List[RoomTemplate]:
                 copies=1,
             ))
     return deck
+
+
+# --- PIÈCE DE VICTOIRE (Section 2.5) ---
+
+ANTECHAMBER_TEMPLATE = RoomTemplate(
+    name="Antechamber",
+    color="purple", # Couleur spéciale pour la victoire
+    doors={"down"},   # On ne peut y entrer que par le bas
+    cost_gems=0,
+    rarity=99,      # N'est pas dans la pioche
+    items={},
+    effect="WIN",
+    constraint=anywhere,
+    copies=1,
+)

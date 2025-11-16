@@ -9,7 +9,7 @@ import random
 from joueur import Joueur
 from room_defs import build_initial_deck, RoomTemplate
 from grille import Grille
-
+from room_defs import build_initial_deck, RoomTemplate, ANTECHAMBER_TEMPLATE 
 # --- INITIALISATION PYGAME ---
 pygame.init()
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
@@ -34,12 +34,15 @@ class Jeu:
         # Placer la pièce de départ
         piece_depart = self.pioche.pop(0) 
         self.grille.placer_piece(piece_depart, self.grille.joueur_x, self.grille.joueur_y)
-        
+        # 2. Pièce de VICTOIRE (en haut au milieu)
+        self.win_x, self.win_y = 0, 4 # Ligne 0, Colonne 4
+        self.grille.placer_piece(ANTECHAMBER_TEMPLATE, self.win_x, self.win_y)
         # Gérer l'état du jeu (crucial)
         self.etat = "deplacement" # Peut être "deplacement" ou "tirage"
         self.choix_tirage = [] # Va stocker les 3 pièces proposées
         self.selection_choix = 0 # Index du choix (0, 1, ou 2)
         self.destination_tirage = None # Coords (x, y) de la nouvelle pièce
+        self.jeu_gagne = False
 
         # Collecter les objets de la pièce de départ
         self.collecter_objets_et_effets(piece_depart)
@@ -47,8 +50,8 @@ class Jeu:
     def run(self):
         """Boucle de jeu principale."""
         running = True
-        # La boucle s'arrête si on quitte OU si on n'a plus de pas [cite: 34]
-        while running and self.joueur.a_assez_pas():
+        # La boucle s'arrête si on quitte, si on n'a plus de pas, OU si on a gagné
+        while running and self.joueur.a_assez_pas() and not self.jeu_gagne:
             
             # 1. Gérer les événements (clavier)
             self.gerer_evenements()
@@ -58,8 +61,13 @@ class Jeu:
 
             pygame.display.flip()
             clock.tick(60)
-            
-        print("Fin du jeu. Plus de pas ou fermeture.")
+        
+        # --- Boucle terminée, afficher l'écran de fin ---
+        if self.jeu_gagne:
+            self.afficher_ecran_fin("VOUS AVEZ GAGNÉ !")
+        elif not self.joueur.a_assez_pas():
+            self.afficher_ecran_fin("GAME OVER - Plus de pas")
+        
         pygame.quit()
         sys.exit()
 
@@ -116,11 +124,19 @@ class Jeu:
 
         # 3. Si la pièce est DÉJÀ DÉCOUVERTE
         if piece_destination:
+            
+            # --- VÉRIFICATION DE VICTOIRE ---
+            if new_x == self.win_x and new_y == self.win_y:
+                print("VICTOIRE ATTEINTE !")
+                self.jeu_gagne = True
+                return # On arrête tout
+            
+            # Si ce n'est pas la victoire, on continue
             self.grille.joueur_x, self.grille.joueur_y = new_x, new_y
             self.joueur.perdre_pas(1) 
             print(f"Entrée dans {piece_destination.name}")
             self.collecter_objets_et_effets(piece_destination)
-            
+
         # 4. Si la pièce est NOUVELLE (Porte fermée)
         else:
             print("Porte vers une pièce inconnue !")
@@ -226,6 +242,21 @@ class Jeu:
         else:
             print(f"Pas assez de gemmes pour {piece_choisie.name} (coûte {cout})")
             # (On reste en mode "tirage")
+
+            # ... (dans main.py, dans la classe Jeu) ...
+
+    def afficher_ecran_fin(self, message):
+        """Affiche un simple écran de fin."""
+        print(message) # Pour le terminal
+        
+        screen.fill(BLACK)
+        txt = font.render(message, True, WHITE)
+        txt_rect = txt.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+        screen.blit(txt, txt_rect)
+        pygame.display.flip()
+        
+        # Attendre 3 secondes avant de quitter
+        pygame.time.wait(3000)
 
     def dessiner(self):
         """Dessine l'état du jeu (Grille, UI, Tirage)."""
