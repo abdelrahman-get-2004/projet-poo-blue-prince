@@ -123,3 +123,40 @@ class Joueur:
         
         # Pas d'objet, pas de modification
         return 1.0
+    
+
+    # --- MÉTHODES "CONTRAT" DE HAUT NIVEAU (Pour Idris) ---
+
+    def peut_creuser(self) -> bool:
+        """
+        Vérifie si le joueur a l'objet nécessaire pour creuser.
+        (Requis pour Tableau 2)
+        """
+        return self.a_objet("Pelle") # [cite: 53]
+
+    def peut_ouvrir_coffre(self) -> bool:
+        """
+        Vérifie si le joueur a UN moyen d'ouvrir un coffre.
+        (Requis pour Tableau 2)
+        """
+        # Peut ouvrir avec une clé [cite: 77] OU un marteau [cite: 54, 77]
+        return self.a_assez_cles(1) or self.a_objet("Marteau")
+
+    def peut_ouvrir_porte(self, niveau_porte: int) -> bool:
+        """
+        Vérifie si le joueur a UN moyen d'ouvrir une porte
+        d'un certain niveau.
+        (Requis pour Tableau 1)
+        """
+        if niveau_porte == 0:
+            return True # Les portes de niveau 0 sont toujours ouvertes [cite: 122]
+        
+        if niveau_porte == 1:
+            # Niveau 1 : Clé [cite: 124] OU Kit de crochetage 
+            return self.a_assez_cles(1) or self.a_objet("Kit de crochetage")
+        
+        if niveau_porte == 2:
+            # Niveau 2 : Clé uniquement [cite: 124, 126]
+            return self.a_assez_cles(1)
+        
+        return False # Niveaux inconnus
