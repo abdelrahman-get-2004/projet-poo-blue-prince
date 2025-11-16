@@ -88,6 +88,7 @@ class Joueur:
         print(f"{objet.nom} ajouté à l'inventaire.")
 
     def a_objet(self, nom_objet: str) -> bool:
+
         """
         Vérifie si le joueur possède un objet par son nom.
         Ex: a_objet("Pelle") [cite: 53] ou a_objet("Kit de crochetage") [cite: 55]
@@ -96,3 +97,29 @@ class Joueur:
             if objet.nom == nom_objet:
                 return True
         return False
+    
+    # --- MÉTHODES POUR LES "EFFETS ASSOCIÉS" (Tableau 1) ---
+
+    def get_modificateur_chance_objet(self) -> float:
+        """
+        Renvoie le multiplicateur de chance pour trouver des objets.
+        (Pour la Patte de lapin)
+        """
+        if self.a_objet("Patte de lapin"):
+            # L'effet de la patte de lapin (ex: +30% de chance)
+            return 1.3  
+        
+        # Pas d'objet, pas de modification
+        return 1.0
+
+    def get_modificateur_chance_metal(self) -> float:
+        """
+        Renvoie le multiplicateur de chance pour trouver des clés/pièces.
+        (Pour le Détecteur de métaux)
+        """
+        if self.a_objet("Détecteur de métaux"):
+            # L'effet du détecteur (ex: +50% de chance)
+            return 1.5
+        
+        # Pas d'objet, pas de modification
+        return 1.0
