@@ -30,7 +30,10 @@ class Jeu:
         
         self.pioche = build_initial_deck() # Module de Tiantian
         print(f"{len(self.pioche)} pièces chargées dans la pioche.")
-        
+         # Définir la taille des cases et charger les images ---
+        self.taille_case = 60
+        self.room_images = self.charger_images_pieces() 
+        # -----------------------------------------------------------
         # Placer la pièce de départ
         piece_depart = self.pioche.pop(0) 
         self.grille.placer_piece(piece_depart, self.grille.joueur_x, self.grille.joueur_y)
@@ -93,6 +96,9 @@ class Jeu:
                         self.tenter_deplacement(dx=0, dy=-1)
                     if event.key == pygame.K_d: # Droite
                         self.tenter_deplacement(dx=0, dy=1)
+                        # --- AJOUT POUR L'INTERACTION (Touche E) ---
+                    if event.key == pygame.K_e:
+                        self.interagir_avec_piece()
                 
                 # --- Si on est en mode TIRAGE DE PIÈCE ---
                 elif self.etat == "tirage":
@@ -112,12 +118,11 @@ class Jeu:
                             print("Pas assez de dés pour relancer.")
 
 
-  
 
     def tenter_deplacement(self, dx, dy):
         """
         Logique de déplacement (Section 2.5).
-        MISE À JOUR AVEC LES PORTES VERROUILLÉES (Section 2.6)
+        MISE À JOUR AVEC LA DIFFICULTÉ CROISSANTE (Section 2.8)
         """
         
         x_actuel, y_actuel = self.grille.joueur_x, self.grille.joueur_y
@@ -150,11 +155,27 @@ class Jeu:
         else:
             print("Porte vers une pièce inconnue !")
             
-            # --- LOGIQUE DE PORTE (Section 2.6) ---
-            # On simule un niveau de porte
-            # (Simplification : on ne gère pas la profondeur pour l'instant)
-            niveau_porte = random.choice([0, 1, 1, 2]) # 25% Nv0, 50% Nv1, 25% Nv2
-            print(f"La porte est de niveau {niveau_porte}.")
+            # --- NOUVELLE LOGIQUE DE PORTE (Section 2.8) ---
+            # La difficulté dépend de la ligne (new_x)
+            # Row 4 (départ) -> Nv 0
+            # Row 3 -> 50% Nv 0, 50% Nv 1
+            # Row 2 -> 33% Nv 0, 66% Nv 1
+            # Row 1 -> 50% Nv 1, 50% Nv 2
+            # Row 0 (fin) -> Nv 2
+            
+            niveau_porte = 0 # Par défaut
+            if new_x == 4: # Rangée de départ
+                niveau_porte = 0
+            elif new_x == 3:
+                niveau_porte = random.choice([0, 1])
+            elif new_x == 2:
+                niveau_porte = random.choice([0, 1, 1])
+            elif new_x == 1:
+                niveau_porte = random.choice([1, 1, 2])
+            elif new_x == 0: # Rangée de la victoire
+                niveau_porte = 2
+            
+            print(f"La porte vers la ligne {new_x} est de niveau {niveau_porte}.")
 
             # On vérifie si le joueur peut l'ouvrir (APPEL À VOTRE CODE)
             if self.joueur.peut_ouvrir_porte(niveau_porte): #
@@ -271,33 +292,46 @@ class Jeu:
         # Attendre 3 secondes avant de quitter
         pygame.time.wait(3000)
 
+        
+  # ... (dans la classe Jeu) ...
+
     def dessiner(self):
         """Dessine l'état du jeu (Grille, UI, Tirage)."""
         screen.fill(BLACK)
         
         # 1. Dessiner la grille
-        taille_case = 60
         for x in range(self.grille.rows):
             for y in range(self.grille.cols):
-                rect = pygame.Rect(y * taille_case + 50, x * taille_case + 50, taille_case - 2, taille_case - 2)
+                rect = pygame.Rect(y * self.taille_case + 50, x * self.taille_case + 50, self.taille_case - 2, self.taille_case - 2)
                 
                 piece = self.grille.get_piece(x, y)
+                
+                # --- CORRECTION : Dessiner les images ---
                 if piece:
-                    # Pièce découverte (code de Tiantian)
-                    color_map = {
-                        "green": (0, 100, 0), "yellow": (200, 200, 0),
-                        "blue": (50, 50, 150), "red": (100, 0, 0),
-                        "purple": (100, 0, 100), "orange": (200, 100, 0)
-                    }
-                    pygame.draw.rect(screen, color_map.get(piece.color, WHITE), rect)
+                    # On essaie de dessiner l'image
+                    image_a_dessiner = self.room_images.get(piece.name)
+                    
+                    if image_a_dessiner:
+                        # Si on a l'image, on la "blitte"
+                        screen.blit(image_a_dessiner, rect.topleft)
+                    else:
+                        # SINON, on utilise l'ancienne méthode (carrés de couleur)
+                        color_map = {
+                            "green": (0, 100, 0), "yellow": (200, 200, 0),
+                            "blue": (50, 50, 150), "red": (100, 0, 0),
+                            "purple": (100, 0, 100), "orange": (200, 100, 0)
+                        }
+                        pygame.draw.rect(screen, color_map.get(piece.color, WHITE), rect)
                 else:
+                    # Pièce inconnue
                     pygame.draw.rect(screen, GREY, rect)
+                # --- FIN DE LA CORRECTION ---
                     
                 # Dessiner le joueur
                 if x == self.grille.joueur_x and y == self.grille.joueur_y:
                     pygame.draw.circle(screen, (255, 0, 0), rect.center, 10)
 
-        # 2. Dessiner l'UI 
+        # 2. Dessiner l'UI (VOTRE CODE)
         txt_pas = font.render(f"Pas: {self.joueur.consommables['pas']}", True, WHITE)
         screen.blit(txt_pas, (600, 50))
         txt_cles = font.render(f"Clés: {self.joueur.consommables['cles']}", True, WHITE)
@@ -306,10 +340,9 @@ class Jeu:
         screen.blit(txt_gemmes, (600, 110))
         txt_or = font.render(f"Or: {self.joueur.consommables['pieces_or']}", True, WHITE)
         screen.blit(txt_or, (600, 140))
-        # --- AJOUT POUR LES DÉS ---
         txt_des = font.render(f"Dés: {self.joueur.consommables['des']}", True, WHITE)
         screen.blit(txt_des, (600, 170)) 
-
+        
         # 3. Dessiner l'écran de TIRAGE
         if self.etat == "tirage":
             pygame.draw.rect(screen, (10, 10, 10), (0, 400, 800, 200)) # Fond
@@ -317,20 +350,109 @@ class Jeu:
                 x_pos = 100 + i * 220
                 box_rect = pygame.Rect(x_pos, 420, 200, 160)
                 
-                # Surligner le choix sélectionné
+                # Dessiner le cadre de sélection
                 if i == self.selection_choix:
                     pygame.draw.rect(screen, WHITE, box_rect, 3)
                 else:
                     pygame.draw.rect(screen, GREY, box_rect, 1)
-                
-                # Afficher infos de la pièce
-                txt_nom = font.render(piece.name, True, WHITE)
-                screen.blit(txt_nom, (x_pos + 10, 430))
-                txt_cout = font.render(f"Coût: {piece.cost_gems} gemmes", True, WHITE)
-                screen.blit(txt_cout, (x_pos + 10, 460))
-                txt_rarete = font.render(f"Rareté: {piece.rarity}", True, WHITE)
-                screen.blit(txt_rarete, (x_pos + 10, 490))
 
+                # --- CORRECTION : Dessiner l'image de la pièce ---
+                image_a_dessiner = self.room_images.get(piece.name)
+                
+                if image_a_dessiner:
+                    # On redimensionne l'image pour qu'elle rentre dans la boîte
+                    img_scaled = pygame.transform.scale(image_a_dessiner, (180, 100)) # Nouvelle taille
+                    img_rect = img_scaled.get_rect(centerx=box_rect.centerx, top=box_rect.top + 10)
+                    screen.blit(img_scaled, img_rect)
+                else:
+                    # Fallback si l'image n'est pas trouvée
+                    txt_nom = font.render(piece.name, True, WHITE)
+                    screen.blit(txt_nom, (x_pos + 10, 430))
+                
+                # Infos (plus bas pour laisser la place à l'image)
+                txt_cout = font.render(f"Coût: {piece.cost_gems} gemmes", True, WHITE)
+                screen.blit(txt_cout, (x_pos + 10, box_rect.bottom - 45))
+                txt_rarete = font.render(f"Rareté: {piece.rarity}", True, WHITE)
+                screen.blit(txt_rarete, (x_pos + 10, box_rect.bottom - 25))
+
+        # 4. Dessiner les Interactables
+        if self.etat == "deplacement":
+            piece = self.grille.get_piece(self.grille.joueur_x, self.grille.joueur_y)
+            if piece and piece.interactables:
+                interact_txt = f"Appuyez sur [E] pour interagir avec: {piece.interactables[0]}"
+                txt = font.render(interact_txt, True, WHITE)
+                txt_rect = txt.get_rect(center=(SCREEN_WIDTH // 2, 550))
+                pygame.draw.rect(screen, BLACK, txt_rect.inflate(20, 10))
+                screen.blit(txt, txt_rect)
+
+    def interagir_avec_piece(self):
+        """
+        Gère l'interaction avec les objets de la pièce (Pelle, Marteau).
+        (Fonctionnalité Syscom - Tableau 2)
+        """
+        piece = self.grille.get_piece(self.grille.joueur_x, self.grille.joueur_y)
+        if not piece or not piece.interactables:
+            print("Il n'y a rien avec quoi interagir ici.")
+            return
+
+        interactable = piece.interactables[0] # On prend le premier
+
+        # 1. Logique pour CREUSER (APPEL À VOTRE CODE)
+        if interactable == "dig_spot":
+            if self.joueur.peut_creuser(): #
+                print("Le joueur utilise la Pelle !")
+                # Donner une récompense aléatoire
+                self.joueur.gagner_or(random.randint(5, 15))
+                piece.interactables.pop(0) # Retirer l'objet
+            else:
+                print("Il y a un endroit où creuser, mais vous n'avez pas de pelle.")
+        
+        # 2. Logique pour COFFRE (APPEL À VOTRE CODE)
+        elif interactable == "chest":
+            if self.joueur.peut_ouvrir_coffre(): #
+                print("Le joueur ouvre le coffre !")
+                
+                # Dépenser une clé SI on n'a pas le marteau
+                if not self.joueur.a_objet("Marteau"):
+                    self.joueur.depenser_cle(1)
+                
+                # Donner une récompense aléatoire
+                self.joueur.gagner_cles(random.randint(0, 2))
+                self.joueur.gagner_gemmes(random.randint(0, 1))
+                piece.interactables.pop(0) # Retirer l'objet
+            else:
+                print("Il y a un coffre, mais il vous faut une clé ou un marteau.")
+
+
+    def charger_images_pieces(self):
+        """
+        Charge toutes les images des pièces depuis le dossier /assets.
+        """
+        print("Chargement des images des pièces...")
+        images = {}
+        
+        # On doit importer 'build_templates'
+        from room_defs import build_templates, ANTECHAMBER_TEMPLATE
+        
+        # On récupère tous les noms de pièces possibles
+        tous_templates = build_templates()
+        tous_templates.append(ANTECHAMBER_TEMPLATE) # Ne pas oublier la pièce de victoire
+        noms_uniques = set(tpl.name for tpl in tous_templates)
+        
+        for name in noms_uniques:
+            # Le chemin est "assets/Nom De La Piece.png"
+            path = f"assets/{name}.png"
+            try:
+                img = pygame.image.load(path)
+                # On redimensionne l'image à la taille de nos cases
+                img_scaled = pygame.transform.scale(img, (self.taille_case - 2, self.taille_case - 2))
+                images[name] = img_scaled
+            except FileNotFoundError:
+                # Si l'image n'est pas trouvée, on affichera une couleur
+                print(f"AVERTISSEMENT: Image non trouvée pour '{name}'.")
+                images[name] = None
+        
+        return images
 # --- Point d'entrée ---
 if __name__ == "__main__":
     jeu = Jeu()
