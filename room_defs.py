@@ -1,30 +1,30 @@
-from dataclasses import dataclass
+
+from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Set
-
-
-# Directions use strings: "up", "down", "left", "right"
-
 
 @dataclass
 class RoomTemplate:
+    # --- Champs SANS valeur par défaut (obligatoires) ---
     name: str
-    color: str  # blue/yellow/green/purple/orange/red
-    doors: Set[str]  # default door set (placement ensures entrance connectivity)
+    color: str
+    doors: Set[str]
     cost_gems: int
-    rarity: int  # 0..3, weight=1/(3**rarity)
-    items: Dict[str, int]  # e.g., {"gem": 2, "coin": 1}
-    effect: Optional[str]  # e.g., "restore_steps", "trap", "shop"
-    constraint: Optional[Callable[[int, int, int, int], bool]]  # (row, col, rows, cols) -> bool
-    copies: int  # number of copies in initial deck
+    rarity: int
+    items: Dict[str, int]
+    copies: int
+    effect: Optional[str]
+    constraint: Optional[Callable[[int, int, int, int], bool]]
+    
+    # --- Champs AVEC valeur par défaut (optionnels) ---
+    # Doit être en dernier
+    interactables: List[str] = field(default_factory=list)
 
 
 def edge_only(row: int, col: int, rows: int, cols: int) -> bool:
     return row == 0 or row == rows - 1 or col == 0 or col == cols - 1
 
-
 def not_top_row(row: int, col: int, rows: int, cols: int) -> bool:
     return row != 0
-
 
 def anywhere(row: int, col: int, rows: int, cols: int) -> bool:
     return True
@@ -33,68 +33,75 @@ def anywhere(row: int, col: int, rows: int, cols: int) -> bool:
 def build_templates() -> List[RoomTemplate]:
     t: List[RoomTemplate] = []
 
-    # Blue: common and varied effects
+    # --- NOMS MIS À JOUR POUR CORRESPONDRE AUX IMAGES ---
+
+    # "Hall" est devenu "Entrance Hall"
     t.append(RoomTemplate(
-        name="Hall",
+        name="Entrance Hall",
         color="blue",
         doors={"up", "left", "right"},
         cost_gems=0,
         rarity=0,
         items={},
+        copies=3,
         effect=None,
         constraint=anywhere,
-        copies=3,
     ))
+    
+    # "Guest Room" est correct
     t.append(RoomTemplate(
         name="Guest Room",
         color="blue",
         doors={"up", "down"},
         cost_gems=0,
         rarity=0,
-        items={"coin": 1},
+        items={"coin": 1, "dice": 1},
+        copies=4,
         effect=None,
         constraint=anywhere,
-        copies=4,
     ))
 
-    # Yellow: shop
+    # "General Store" est devenu "Commissary"
     t.append(RoomTemplate(
-        name="General Store",
+        name="Commissary",
         color="yellow",
         doors={"left", "right"},
         cost_gems=1,
         rarity=1,
         items={},
+        copies=3,
         effect="shop",
         constraint=anywhere,
-        copies=3,
     ))
 
-    # Green: indoor garden (gems)
+    # "Indoor Garden" est devenu "Veranda"
     t.append(RoomTemplate(
-        name="Indoor Garden",
+        name="Veranda",
         color="green",
         doors={"up"},
         cost_gems=0,
         rarity=0,
         items={"gem": 2},
+        interactables=["dig_spot"],
+        copies=5,
         effect=None,
         constraint=anywhere,
-        copies=5,
     ))
+    
+    # "Dig Site" est devenu "Terrace"
     t.append(RoomTemplate(
-        name="Dig Site",
+        name="Terrace",
         color="green",
         doors={"left"},
         cost_gems=0,
         rarity=1,
         items={"gem": 1, "coin": 1},
-        effect=None,
-        constraint=edge_only,  # edge only
         copies=3,
+        effect=None,
+        constraint=edge_only,
     ))
 
-    # Purple: bedroom (restore steps)
+    # "Bedroom" est correct
     t.append(RoomTemplate(
         name="Bedroom",
         color="purple",
@@ -102,60 +109,65 @@ def build_templates() -> List[RoomTemplate]:
         cost_gems=0,
         rarity=0,
         items={},
+        copies=6,
         effect="restore_steps",
         constraint=anywhere,
-        copies=6,
     ))
 
-    # Orange: corridors (multiple doors)
+    # "Long Corridor" est devenu "Hallway"
     t.append(RoomTemplate(
-        name="Long Corridor",
+        name="Hallway",
         color="orange",
         doors={"up", "down", "left"},
         cost_gems=0,
         rarity=0,
         items={},
+        copies=6,
         effect=None,
         constraint=anywhere,
-        copies=6,
     ))
+    
+    # "Cross Corridor" est devenu "Corridor"
     t.append(RoomTemplate(
-        name="Cross Corridor",
+        name="Corridor",
         color="orange",
         doors={"up", "down", "left", "right"},
         cost_gems=1,
         rarity=1,
         items={},
+        copies=3,
         effect=None,
         constraint=anywhere,
-        copies=3,
     ))
 
-    # Red: adverse effects
+    # "Danger Storage" est devenu "Lavatory"
     t.append(RoomTemplate(
-        name="Danger Storage",
+        name="Lavatory",
         color="red",
         doors={"right"},
         cost_gems=0,
         rarity=1,
         items={},
-        effect="trap",  # first entry: -1 step
-        constraint=anywhere,
         copies=4,
+        effect="trap",
+        constraint=anywhere,
     ))
+    
+    # "Cellar" est devenu "Wine Cellar"
     t.append(RoomTemplate(
-        name="Cellar",
+        name="Wine Cellar",
         color="red",
         doors={"up"},
         cost_gems=0,
         rarity=2,
         items={"coin": 2},
+        interactables=["chest"],
+        copies=2,
         effect="trap",
         constraint=not_top_row,
-        copies=2,
     ))
 
-    # Vault (blue or special case)
+    # "Vault" est correct
     t.append(RoomTemplate(
         name="Vault",
         color="blue",
@@ -163,9 +175,9 @@ def build_templates() -> List[RoomTemplate]:
         cost_gems=2,
         rarity=3,
         items={"coin": 3},
+        copies=2,
         effect=None,
         constraint=edge_only,
-        copies=2,
     ))
 
     return t
@@ -183,6 +195,7 @@ def build_initial_deck() -> List[RoomTemplate]:
                 cost_gems=tpl.cost_gems,
                 rarity=tpl.rarity,
                 items=dict(tpl.items),
+                interactables=list(tpl.interactables),
                 effect=tpl.effect,
                 constraint=tpl.constraint,
                 copies=1,
@@ -194,11 +207,12 @@ def build_initial_deck() -> List[RoomTemplate]:
 
 ANTECHAMBER_TEMPLATE = RoomTemplate(
     name="Antechamber",
-    color="purple", # Couleur spéciale pour la victoire
-    doors={"down"},   # On ne peut y entrer que par le bas
+    color="purple",
+    doors={"down"},
     cost_gems=0,
-    rarity=99,      # N'est pas dans la pioche
+    rarity=99,
     items={},
+    interactables=[],
     effect="WIN",
     constraint=anywhere,
     copies=1,

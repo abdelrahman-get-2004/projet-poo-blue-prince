@@ -125,7 +125,7 @@ class Joueur:
         return 1.0
     
 
-    # --- MÉTHODES "CONTRAT" DE HAUT NIVEAU (Pour Idris) ---
+    # --- MÉTHODES "CONTRAT" DE HAUT NIVEAU (Pour Idris) ---faciliter la lecture quant tu commende
 
     def peut_creuser(self) -> bool:
         """

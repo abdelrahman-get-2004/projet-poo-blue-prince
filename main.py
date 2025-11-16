@@ -26,19 +26,21 @@ class Jeu:
     """
     def __init__(self):
         self.joueur = Joueur() # Module d'Abdelrahman
-        self.grille = Grille(5, 9) # Module Grille
+        self.grille = Grille(9, 5) # Module Grille
         
         self.pioche = build_initial_deck() # Module de Tiantian
         print(f"{len(self.pioche)} pièces chargées dans la pioche.")
          # Définir la taille des cases et charger les images ---
-        self.taille_case = 60
+        self.taille_case = 50
         self.room_images = self.charger_images_pieces() 
         # -----------------------------------------------------------
         # Placer la pièce de départ
         piece_depart = self.pioche.pop(0) 
+        setattr(piece_depart, 'effect_applied', False)
         self.grille.placer_piece(piece_depart, self.grille.joueur_x, self.grille.joueur_y)
         # 2. Pièce de VICTOIRE (en haut au milieu)
-        self.win_x, self.win_y = 0, 4 # Ligne 0, Colonne 4
+        setattr(ANTECHAMBER_TEMPLATE, 'effect_applied', False)
+        self.win_x, self.win_y = 0, 2 
         self.grille.placer_piece(ANTECHAMBER_TEMPLATE, self.win_x, self.win_y)
         # Gérer l'état du jeu (crucial)
         self.etat = "deplacement" # Peut être "deplacement" ou "tirage"
@@ -121,127 +123,179 @@ class Jeu:
 
     def tenter_deplacement(self, dx, dy):
         """
-        Logique de déplacement (Section 2.5).
-        MISE À JOUR AVEC LA DIFFICULTÉ CROISSANTE (Section 2.8)
+        Logique de déplacement.
+        MISE À JOUR : Difficulté 9 rangées + Filtre de porte
         """
         
         x_actuel, y_actuel = self.grille.joueur_x, self.grille.joueur_y
         new_x, new_y = x_actuel + dx, y_actuel + dy
         
-        # 1. Vérifier si on est dans les limites
         if not (0 <= new_x < self.grille.rows and 0 <= new_y < self.grille.cols):
-            print("Déplacement hors limites.")
             return
 
-        # 2. Regarder la pièce de destination
         piece_destination = self.grille.get_piece(new_x, new_y)
 
-        # 3. Si la pièce est DÉJÀ DÉCOUVERTE
         if piece_destination:
-            
-            # --- VÉRIFICATION DE VICTOIRE ---
             if new_x == self.win_x and new_y == self.win_y:
-                print("VICTOIRE ATTEINTE !")
                 self.jeu_gagne = True
-                return # On arrête tout
+                return 
             
-            # Si ce n'est pas la victoire, on continue
             self.grille.joueur_x, self.grille.joueur_y = new_x, new_y
             self.joueur.perdre_pas(1) 
-            print(f"Entrée dans {piece_destination.name}")
             self.collecter_objets_et_effets(piece_destination)
-
-        # 4. Si la pièce est NOUVELLE (Porte fermée)
+            
         else:
             print("Porte vers une pièce inconnue !")
             
-            # --- NOUVELLE LOGIQUE DE PORTE (Section 2.8) ---
-            # La difficulté dépend de la ligne (new_x)
-            # Row 4 (départ) -> Nv 0
-            # Row 3 -> 50% Nv 0, 50% Nv 1
-            # Row 2 -> 33% Nv 0, 66% Nv 1
-            # Row 1 -> 50% Nv 1, 50% Nv 2
-            # Row 0 (fin) -> Nv 2
-            
-            niveau_porte = 0 # Par défaut
-            if new_x == 4: # Rangée de départ
-                niveau_porte = 0
-            elif new_x == 3:
-                niveau_porte = random.choice([0, 1])
-            elif new_x == 2:
-                niveau_porte = random.choice([0, 1, 1])
-            elif new_x == 1:
-                niveau_porte = random.choice([1, 1, 2])
-            elif new_x == 0: # Rangée de la victoire
-                niveau_porte = 2
+            # --- NOUVELLE LOGIQUE DE DIFFICULTÉ (9 RANGÉES) ---
+            # Rangée 8 (départ) -> Nv 0 [cite: 138]
+            # Rangée 0 (fin) -> Nv 2 [cite: 139]
+            niveau_porte = 0
+            if new_x == 8: niveau_porte = 0
+            elif new_x == 7: niveau_porte = random.choice([0, 1])
+            elif new_x == 6: niveau_porte = 1
+            elif new_x == 5: niveau_porte = random.choice([1, 1, 2])
+            elif new_x == 4: niveau_porte = random.choice([1, 2])
+            elif new_x == 3: niveau_porte = random.choice([1, 2, 2])
+            elif new_x <= 2: niveau_porte = 2
             
             print(f"La porte vers la ligne {new_x} est de niveau {niveau_porte}.")
 
-            # On vérifie si le joueur peut l'ouvrir (APPEL À VOTRE CODE)
-            if self.joueur.peut_ouvrir_porte(niveau_porte): #
+            if self.joueur.peut_ouvrir_porte(niveau_porte):
                 print("Le joueur peut ouvrir la porte.")
                 
-                # On dépense une clé si nécessaire (APPEL À VOTRE CODE)
                 if niveau_porte == 1 and not self.joueur.a_objet("Kit de crochetage"):
                     self.joueur.depenser_cle(1)
                 elif niveau_porte == 2:
                     self.joueur.depenser_cle(1)
                 
-                # Lancer le tirage
+                # --- LOGIQUE DE "ROTATION" (FILTRAGE) ---
+                # Déterminer la porte d'entrée requise
+                required_door = ""
+                if dx == -1: required_door = "down" # Si on monte (dx=-1), la pièce doit avoir une porte en bas
+                if dx == 1:  required_door = "up"
+                if dy == -1: required_door = "right"
+                if dy == 1:  required_door = "left"
+                
                 self.etat = "tirage"
                 self.destination_tirage = (new_x, new_y)
-                self.lancer_tirage()
+                self.lancer_tirage(required_door) # <--- ON PASSE LA PORTE REQUISE
                 
             else:
-                # Le joueur est bloqué
                 print("Porte verrouillée ! Vous n'avez pas la clé ou le kit.")
-                # (Le joueur ne bouge pas, ne perd pas de pas)
+    # ... (dans la classe Jeu) ...
+
     def collecter_objets_et_effets(self, piece: RoomTemplate):
         """
         Ramasse les objets et applique les effets de la pièce.
-        (Connexion entre le code de Tiantian et le vôtre)
+        MISE À JOUR : Ajout des effets Syscom (Tableau 2)
         """
-        # 1. Collecter les objets (clés, gemmes, or) 
+        # 1. Collecter les objets (clés, gemmes, or, dés)
         if "gem" in piece.items:
             qte = piece.items.pop("gem")
-            self.joueur.gagner_gemmes(qte) # APPEL À VOTRE CODE
+            self.joueur.gagner_gemmes(qte)
         if "coin" in piece.items:
             qte = piece.items.pop("coin")
-            self.joueur.gagner_or(qte) # APPEL À VOTRE CODE
-        # --- AJOUT POUR LES DÉS ---
+            self.joueur.gagner_or(qte)
         if "dice" in piece.items:
             qte = piece.items.pop("dice")
-            self.joueur.gagner_des(qte) # APPEL À VOTRE CODE
+            self.joueur.gagner_des(qte)
+        # (Ajoutez les clés si vous les mettez dans 'items')
         
+        # 2. Appliquer les effets (une seule fois par pièce)
+        if piece.effect_applied:
+            return
         
-        # 2. Appliquer les effets (exemples simples)
-        if piece.effect == "restore_steps": # [cite: 100]
-            self.joueur.gagner_pas(5) # Gagner 5 pas
-            piece.effect = None # Effet appliqué une seule fois
-        if piece.effect == "trap": # [cite: 102]
-            self.joueur.perdre_pas(5) # Perdre 5 pas
-            piece.effect = None
+        print(f"Application de l'effet: {piece.effect}")
+        
+        if piece.effect == "restore_steps":
+            self.joueur.gagner_pas(5)
+            self.set_status("Vous vous reposez. +5 pas.")
+            piece.effect_applied = True
+            
+        elif piece.effect == "restore_steps_plus":
+            self.joueur.gagner_pas(15) # Effet plus puissant
+            self.set_status("Vous vous reposez dans le lit principal. +15 pas.")
+            piece.effect_applied = True
+            
+        elif piece.effect == "trap":
+            self.joueur.perdre_pas(5)
+            self.set_status("C'est un piège ! -5 pas.")
+            piece.effect_applied = True
+            
+        elif piece.effect == "gain_steps_on_enter":
+            self.joueur.gagner_pas(10)
+            self.set_status("Vous priez dans la chapelle. +10 pas.")
+            piece.effect_applied = True
+            
+        elif piece.effect == "shop":
+            self.set_status("C'est un magasin. Appuyez sur [S] pour acheter.")
+            # Ne pas marquer comme "applied" pour pouvoir l'utiliser plusieurs fois
+            
+    
+ 
 
-    def lancer_tirage(self):
-        """Section 2.7 - Tirer 3 pièces dans la pioche."""
+
+   # ... (dans la classe Jeu) ...
+    def lancer_tirage(self, required_door: str):
+        """Section 2.7 - Tirer 3 pièces, filtrées + effets."""
         self.choix_tirage = []
         
-        # Simplification (on ne vérifie pas les contraintes, juste la rareté et coût 0)
+        # --- LOGIQUE DE MODIFICATION DE PIOCHE (Syscom) ---
+        piece_actuelle = self.grille.get_piece(self.grille.joueur_x, self.grille.joueur_y)
+        proba_mod = 1.0 # Modificateur de probabilité
         
-        # 1. Assurer au moins une pièce à 0 gemme [cite: 130]
-        pioche_0_gemme = [p for p in self.pioche if p.cost_gems == 0]
-        if pioche_0_gemme:
-            self.choix_tirage.append(random.choice(pioche_0_gemme))
-        else:
-            # Sécurité (si la pioche est vide de 0 gemmes)
-            self.choix_tirage.append(random.choice(self.pioche))
+        if piece_actuelle.effect == "modify_draft_green":
+            print("Effet Greenhouse: Probabilité pièces vertes augmentée !")
+            proba_mod = 3.0 # 3x plus de chances
+        elif piece_actuelle.effect == "modify_draft_red":
+            print("Effet Furnace: Probabilité pièces rouges augmentée !")
+            proba_mod = 3.0 # 3x plus de chances
+        # ---------------------------------------------------
 
-        # 2. Ajouter 2 autres pièces (elles peuvent aussi être à 0)
-        while len(self.choix_tirage) < 3 and len(self.pioche) > 0:
-            self.choix_tirage.append(random.choice(self.pioche))
+        # 1. Filtrer la pioche par porte
+        pioche_valide = [p for p in self.pioche if required_door in p.doors]
+        
+        if not pioche_valide:
+            print("ERREUR : Aucune pièce dans la pioche ne peut être placée ici !")
+            self.etat = "deplacement"
+            return
+
+        # --- NOUVELLE LOGIQUE DE TIRAGE AVEC POIDS ---
+        # 1. Calculer les poids (rareté + effets)
+        weights = []
+        for p in pioche_valide:
+            # Poids de base (rareté)
+            poids = 1.0 / (3**p.rarity) # 1, 0.33, 0.11, 0.03
+            
+            # Appliquer les modificateurs d'effet
+            if piece_actuelle.effect == "modify_draft_green" and p.color == "green":
+                poids *= proba_mod
+            if piece_actuelle.effect == "modify_draft_red" and p.color == "red":
+                poids *= proba_mod
+                
+            weights.append(poids)
+        # ----------------------------------------------
+            
+        # 2. Assurer au moins une pièce à 0 gemme
+        pioche_0_gemme = [p for p in pioche_valide if p.cost_gems == 0]
+        
+        if pioche_0_gemme:
+            # (On ne peut pas juste la 'choisir', il faut la tirer avec les poids)
+            poids_0_gemme = [w for p, w in zip(pioche_valide, weights) if p.cost_gems == 0]
+            if not poids_0_gemme: poids_0_gemme = [1] # Sécurité
+            
+            self.choix_tirage.append(random.choices(pioche_0_gemme, weights=poids_0_gemme, k=1)[0])
+        else:
+            self.choix_tirage.append(random.choices(pioche_valide, weights=weights, k=1)[0])
+
+        # 3. Ajouter 2 autres pièces (avec poids)
+        while len(self.choix_tirage) < 3 and len(pioche_valide) > 0:
+            self.choix_tirage.append(random.choices(pioche_valide, weights=weights, k=1)[0])
             
         self.selection_choix = 0
         print(f"Tirage: {[p.name for p in self.choix_tirage]}")
+     
 
     def valider_choix_piece(self):
         """Le joueur appuie sur Entrée pour choisir une pièce."""
@@ -258,6 +312,7 @@ class Jeu:
             
             # Placer la pièce
             x, y = self.destination_tirage
+            setattr(piece_choisie, 'effect_applied', False)
             self.grille.placer_piece(piece_choisie, x, y) # [cite: 134]
             
             # La retirer de la pioche [cite: 93]
