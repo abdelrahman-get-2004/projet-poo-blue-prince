@@ -102,8 +102,17 @@ class Jeu:
                         self.selection_choix = min(len(self.choix_tirage) - 1, self.selection_choix + 1)
                     if event.key == pygame.K_RETURN: # Valider
                         self.valider_choix_piece()
+                        # --- AJOUT POUR LES DÉS (Touche R) ---
+                    if event.key == pygame.K_r: #
+                        # On vérifie et dépense un dé (APPEL À VOTRE CODE)
+                        if self.joueur.depenser_de(1): #
+                            print("Relance du tirage !")
+                            self.lancer_tirage() # On relance
+                        else:
+                            print("Pas assez de dés pour relancer.")
 
-   # ... (dans main.py, dans la classe Jeu) ...
+
+  
 
     def tenter_deplacement(self, dx, dy):
         """
@@ -178,7 +187,11 @@ class Jeu:
         if "coin" in piece.items:
             qte = piece.items.pop("coin")
             self.joueur.gagner_or(qte) # APPEL À VOTRE CODE
-        # (Ajoutez "key", "dice" ici si Tiantian les met)
+        # --- AJOUT POUR LES DÉS ---
+        if "dice" in piece.items:
+            qte = piece.items.pop("dice")
+            self.joueur.gagner_des(qte) # APPEL À VOTRE CODE
+        
         
         # 2. Appliquer les effets (exemples simples)
         if piece.effect == "restore_steps": # [cite: 100]
@@ -284,7 +297,7 @@ class Jeu:
                 if x == self.grille.joueur_x and y == self.grille.joueur_y:
                     pygame.draw.circle(screen, (255, 0, 0), rect.center, 10)
 
-        # 2. Dessiner l'UI (VOTRE CODE)
+        # 2. Dessiner l'UI 
         txt_pas = font.render(f"Pas: {self.joueur.consommables['pas']}", True, WHITE)
         screen.blit(txt_pas, (600, 50))
         txt_cles = font.render(f"Clés: {self.joueur.consommables['cles']}", True, WHITE)
@@ -293,6 +306,9 @@ class Jeu:
         screen.blit(txt_gemmes, (600, 110))
         txt_or = font.render(f"Or: {self.joueur.consommables['pieces_or']}", True, WHITE)
         screen.blit(txt_or, (600, 140))
+        # --- AJOUT POUR LES DÉS ---
+        txt_des = font.render(f"Dés: {self.joueur.consommables['des']}", True, WHITE)
+        screen.blit(txt_des, (600, 170)) 
 
         # 3. Dessiner l'écran de TIRAGE
         if self.etat == "tirage":
