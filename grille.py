@@ -2,6 +2,7 @@
 #j ai commencé le partie idris continue dans ce fichier
 
 # On importe la classe de Tiantian(les rooms)
+from typing import Optional
 from room_defs import RoomTemplate
 
 class Grille:
@@ -20,7 +21,7 @@ class Grille:
         self.joueur_x = 4  # Ligne 4 (la dernière)
         self.joueur_y = 4  # Colonne 4 (la centrale)
 
-    def get_piece(self, x, y) -> RoomTemplate | None:
+    def get_piece(self, x, y) -> Optional[RoomTemplate]:
         """Récupère la pièce à une coordonnée."""
         if 0 <= x < self.rows and 0 <= y < self.cols:
             return self.matrice[x][y]
